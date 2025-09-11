@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}DialogueAI - Generated Dialogue{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <div style="font-size: 4rem; color: var(--success-color); margin-bottom: 1rem;">
+            <i class="fas fa-comments"></i>
+        </div>
+        <h2 style="color: var(--text-primary); font-weight: 600;">
+            Dialogue Generated Successfully!
+        </h2>
+        <p style="color: var(--text-secondary); font-size: 1.1rem;">
+            Your personalized conversation based on <strong>{{ filename }}</strong>
+        </p>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin: 2rem 0; padding: 1.5rem; background: rgba(102, 126, 234, 0.05); border-radius: 12px;">
+        <div style="text-align: center;">
+            <div style="font-size: 1.5rem; color: var(--primary-color); margin-bottom: 0.5rem;">
+                <i class="fas fa-bullseye"></i>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Goal</div>
+            <div style="font-size: 0.9rem; font-weight: 500;">{{ user_goal[:50] }}{% if user_goal|length > 50 %}...{% endif %}</div>
+        </div>
+        <div style="text-align: center;">
+            <div style="font-size: 1.5rem; color: var(--primary-color); margin-bottom: 0.5rem;">
+                <i class="fas fa-volume-up"></i>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Tone</div>
+            <div style="font-size: 0.9rem; font-weight: 500; text-transform: capitalize;">{{ tone }}</div>
+        </div>
+        <div style="text-align: center;">
+            <div style="font-size: 1.5rem; color: var(--primary-color); margin-bottom: 0.5rem;">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Level</div>
+            <div style="font-size: 0.9rem; font-weight: 500; text-transform: capitalize;">{{ difficulty }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h3 style="color: var(--text-primary); margin: 0;">
+            <i class="fas fa-theater-masks"></i> Your Generated Dialogue
+        </h3>
+        
+        <div style="display: flex; gap: 1rem;">
+            <button onclick="copyDialogue()" class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                <i class="fas fa-copy"></i> Copy
+            </button>
+            <a href="/download/{{ output_file }}" class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                <i class="fas fa-download"></i> Download
+            </a>
+        </div>
+    </div>
+    
+    <div class="dialogue-output" id="dialogueText">{{ dialogue }}</div>
+    
+    <div style="margin-top: 1rem; padding: 1rem; background: rgba(245, 158, 11, 0.05); border-radius: 8px; border-left: 4px solid var(--warning-color);">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <i class="fas fa-info-circle" style="color: var(--warning-color);"></i>
+            <strong style="color: var(--warning-color);">How to Use This Dialogue</strong>
+        </div>
+        <div style="font-size: 0.9rem; color: var(--text-secondary);">
+            This conversation can be used for educational purposes, presentations, or as a study guide. 
+            The dialogue format makes complex topics more engaging and easier to understand.
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">
+        <i class="fas fa-rocket"></i> What's Next?
+    </h3>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+        <div style="background: linear-gradient(135deg, #f8fafc, #e2e8f0); padding: 1.5rem; border-radius: 12px; text-align: center;">
+            <div style="font-size: 2.5rem; color: var(--primary-color); margin-bottom: 1rem;">
+                <i class="fas fa-file-upload"></i>
+            </div>
+            <h4 style="margin-bottom: 0.5rem;">Try Another Document</h4>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+                Upload a different document and create more dialogues on various topics.
+            </p>
+            <a href="/" class="btn" style="padding: 0.75rem 1.5rem;">
+                <i class="fas fa-plus"></i> New Document
+            </a>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #f8fafc, #e2e8f0); padding: 1.5rem; border-radius: 12px; text-align: center;">
+            <div style="font-size: 2.5rem; color: var(--success-color); margin-bottom: 1rem;">
+                <i class="fas fa-share-alt"></i>
+            </div>
+            <h4 style="margin-bottom: 0.5rem;">Share Your Dialogue</h4>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+                Use this dialogue for teaching, presentations, or share with colleagues.
+            </p>
+            <button onclick="shareDialogue()" class="btn btn-secondary" style="padding: 0.75rem 1.5rem;">
+                <i class="fas fa-share"></i> Share Link
+            </button>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #f8fafc, #e2e8f0); padding: 1.5rem; border-radius: 12px; text-align: center;">
+            <div style="font-size: 2.5rem; color: var(--warning-color); margin-bottom: 1rem;">
+                <i class="fas fa-magic"></i>
+            </div>
+            <h4 style="margin-bottom: 0.5rem;">Customize Further</h4>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+                Generate different variations with different tones or difficulty levels.
+            </p>
+            <button onclick="window.history.back()" class="btn" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, var(--warning-color), #f97316);">
+                <i class="fas fa-arrow-left"></i> Go Back
+            </button>
+        </div>
+    </div>
+</div>
+
+<div style="text-align: center; margin-top: 3rem; padding: 2rem; border-top: 1px solid var(--border-color);">
+    <p style="color: var(--text-secondary); font-size: 0.9rem;">
+        Generated by DialogueAI • Powered by RAG Technology
+    </p>
+</div>
+
+<script>
+function copyDialogue() {
+    const dialogueText = document.getElementById('dialogueText').textContent;
+    
+    navigator.clipboard.writeText(dialogueText).then(function() {
+        // Show success feedback
+        const copyBtn = document.querySelector('button[onclick="copyDialogue()"]');
+        const originalText = copyBtn.innerHTML;
+        
+        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        copyBtn.style.background = 'var(--success-color)';
+        
+        setTimeout(function() {
+            copyBtn.innerHTML = originalText;
+            copyBtn.style.background = '';
+        }, 2000);
+    }).catch(function(err) {
+        console.error('Could not copy text: ', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = dialogueText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        alert('Dialogue copied to clipboard!');
+    });
+}
+
+function shareDialogue() {
+    if (navigator.share) {
+        navigator.share({
+            title: 'DialogueAI Generated Conversation',
+            text: 'Check out this AI-generated dialogue based on {{ filename }}',
+            url: window.location.href
+        }).catch(console.error);
+    } else {
+        // Fallback: copy URL to clipboard
+        navigator.clipboard.writeText(window.location.href).then(function() {
+            alert('Link copied to clipboard!');
+        }).catch(function() {
+            prompt('Copy this link to share:', window.location.href);
+        });
+    }
+}
+
+// Auto-scroll to dialogue on load
+document.addEventListener('DOMContentLoaded', function() {
+    const dialogue = document.getElementById('dialogueText');
+    if (dialogue) {
+        dialogue.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+});
+
+// Add copy-on-click functionality to dialogue text
+document.getElementById('dialogueText').addEventListener('click', function() {
+    this.style.cursor = 'pointer';
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(this);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    // Show tooltip
+    const tooltip = document.createElement('div');
+    tooltip.textContent = 'Click the Copy button above to copy this dialogue';
+    tooltip.style.cssText = `
+        position: absolute;
+        background: var(--text-primary);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        pointer-events: none;
+        z-index: 1000;
+        top: -2rem;
+        left: 50%;
+        transform: translateX(-50%);
+    `;
+    
+    this.style.position = 'relative';
+    this.appendChild(tooltip);
+    
+    setTimeout(() => {
+        if (tooltip.parentNode) {
+            tooltip.parentNode.removeChild(tooltip);
+        }
+        selection.removeAllRanges();
+    }, 2000);
+});
+</script>
+{% endblock %}

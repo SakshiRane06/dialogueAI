@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}DialogueAI - Upload Document{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="text-align: center; margin-bottom: 2rem; color: var(--text-primary); font-weight: 600;">
+        <i class="fas fa-upload"></i> Upload Your Document
+    </h2>
+    
+    <form action="/upload" method="post" enctype="multipart/form-data" id="uploadForm">
+        <div class="form-group">
+            <label class="form-label">
+                <i class="fas fa-file-pdf"></i> Choose your document (PDF, TXT, or DOCX)
+            </label>
+            
+            <div class="upload-area" onclick="document.getElementById('file').click()">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <div class="upload-text">
+                    <strong>Click to browse</strong> or drag and drop your file here
+                </div>
+                <div style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
+                    Supported formats: PDF, TXT, DOCX (Max 16MB)
+                </div>
+            </div>
+            
+            <input type="file" id="file" name="file" accept=".pdf,.txt,.docx" style="display: none;" required>
+        </div>
+        
+        <div style="text-align: center; margin-top: 2rem;">
+            <button type="submit" class="btn" id="uploadBtn">
+                <i class="fas fa-magic"></i>
+                Process Document
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">
+        <i class="fas fa-info-circle"></i> How it works
+    </h3>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
+        <div style="text-align: center;">
+            <div style="font-size: 2.5rem; color: var(--primary-color); margin-bottom: 1rem;">
+                <i class="fas fa-file-upload"></i>
+            </div>
+            <h4 style="margin-bottom: 0.5rem;">1. Upload Document</h4>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                Upload your PDF, TXT, or DOCX file containing the information you want to turn into a dialogue.
+            </p>
+        </div>
+        
+        <div style="text-align: center;">
+            <div style="font-size: 2.5rem; color: var(--primary-color); margin-bottom: 1rem;">
+                <i class="fas fa-robot"></i>
+            </div>
+            <h4 style="margin-bottom: 0.5rem;">2. AI Processing</h4>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                Our RAG system analyzes your document, creates embeddings, and prepares it for dialogue generation.
+            </p>
+        </div>
+        
+        <div style="text-align: center;">
+            <div style="font-size: 2.5rem; color: var(--primary-color); margin-bottom: 1rem;">
+                <i class="fas fa-comments"></i>
+            </div>
+            <h4 style="margin-bottom: 0.5rem;">3. Generate Dialogue</h4>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                Specify your learning goal and get an engaging conversation between a learner and expert.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">
+        <i class="fas fa-cogs"></i> System Status
+    </h3>
+    
+    <div id="systemStatus" style="padding: 1rem; background: #f3f4f6; border-radius: 8px; font-family: monospace; font-size: 0.9rem;">
+        <div style="color: var(--text-secondary);">Loading system status...</div>
+    </div>
+</div>
+
+<script>
+// Form submission handling
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadForm = document.getElementById('uploadForm');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInput = document.getElementById('file');
+    
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', function(e) {
+            if (!fileInput.files || fileInput.files.length === 0) {
+                e.preventDefault();
+                alert('Please select a file first!');
+                return;
+            }
+            
+            // Show loading state
+            const originalText = uploadBtn.innerHTML;
+            uploadBtn.innerHTML = '<span class="loading"><div class="spinner"></div>Processing...</span>';
+            uploadBtn.disabled = true;
+            
+            // Add timeout to prevent hanging
+            setTimeout(function() {
+                if (uploadBtn.disabled) {
+                    uploadBtn.innerHTML = originalText;
+                    uploadBtn.disabled = false;
+                    alert('Upload is taking longer than expected. Please try again or check your file size.');
+                }
+            }, 15000); // 15 second timeout
+        });
+    }
+});
+
+// Load system status
+fetch('/api/status')
+    .then(response => response.json())
+    .then(data => {
+        const statusDiv = document.getElementById('systemStatus');
+        const openaiStatus = data.openai_available ? 
+            '<span style="color: var(--success-color);">✓ Connected</span>' : 
+            '<span style="color: var(--warning-color);">⚠ Not configured</span>';
+        const googleStatus = data.google_available ? 
+            '<span style="color: var(--success-color);">✓ Connected</span>' : 
+            '<span style="color: var(--warning-color);">⚠ Not configured</span>';
+        
+        statusDiv.innerHTML = `
+            <div><strong>System:</strong> <span style="color: var(--success-color);">✓ ${data.status}</span></div>
+            <div><strong>OpenAI API:</strong> ${openaiStatus}</div>
+            <div><strong>Google API:</strong> ${googleStatus}</div>
+            <div><strong>Embedding fallback:</strong> <span style="color: var(--primary-color);">${data.embedding_fallback}</span></div>
+        `;
+    })
+    .catch(error => {
+        console.error('Error fetching status:', error);
+        document.getElementById('systemStatus').innerHTML = 
+            '<div style="color: var(--error-color);">Error loading system status</div>';
+    });
+</script>
+{% endblock %}

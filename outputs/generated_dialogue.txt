@@ -1,0 +1,18 @@
+DialogueAI Generated Conversation
+User Goal: Explain RAG like a conversational podcast
+Generated at: D:\Sakshi\dialoge ai
+
+
+👦 Learner: I'd like to understand the topic from the document you processed.
+
+👨 Expert: Based on the context provided, this appears to be about podcast.
+
+👦 Learner: Can you break that down for me?
+
+👨 Expert: Certainly! The main concepts are outlined in the retrieved context. However, I encountered a technical issue accessing the AI service to provide the full detailed dialogue.
+
+👦 Learner: What should I know about the key points?
+
+👨 Expert: The document covers important information that would benefit from a more detailed explanation. I recommend checking the RAG system output above to see the relevant chunks that were retrieved.
+
+[Note: This is a fallback dialogue due to API connectivity issues. The RAG retrieval system worked correctly.]

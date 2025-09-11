@@ -1,0 +1,13 @@
+This is a test document for DialogueAI.
+
+DialogueAI is an innovative system that transforms documents into engaging conversations between a learner and an expert. 
+
+Key features:
+- Upload any text document
+- Generate natural dialogues 
+- Customize tone and difficulty
+- Download conversations
+
+This technology makes complex information more accessible through conversational learning.
+
+Test your upload with this simple document!
