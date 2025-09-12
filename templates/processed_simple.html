@@ -49,7 +49,8 @@
         <i class="fas fa-magic"></i> Generate Your Dialogue
     </h3>
     
-    <form action="/generate" method="post" id="generateForm">
+    <!-- SIMPLE FORM WITHOUT JAVASCRIPT -->
+    <form action="/generate" method="post">
         <!-- Hidden fields to pass document info -->
         <input type="hidden" name="file_id" value="{{ file_id }}">
         <input type="hidden" name="filename" value="{{ filename }}">
@@ -61,11 +62,11 @@
             <textarea 
                 name="user_goal" 
                 class="form-control" 
-                placeholder="e.g., 'Explain machine learning concepts in simple terms' or 'Help me understand the key benefits and challenges'"
+                placeholder="e.g., 'Explain RAG like a podcast' or 'Help me understand the key concepts'"
                 rows="3"
                 required
                 style="resize: vertical; min-height: 80px;"
-            ></textarea>
+            >Explain RAG like a podcast</textarea>
             <small style="color: var(--text-secondary); font-size: 0.85rem;">
                 Be specific about what you'd like to learn or understand from the document.
             </small>
@@ -102,58 +103,23 @@
                     <i class="fas fa-robot"></i> AI Provider
                 </label>
                 <select name="provider" class="form-control">
+                    <option value="puter" selected>Puter.js (Free)</option>
                     <option value="auto">Auto (Best Available)</option>
-                    <option value="puter">Puter.js (Free)</option>
                     <option value="google">Google Gemini</option>
                 </select>
                 <small style="color: var(--text-secondary); font-size: 0.75rem;">
-                    Puter.js provides free access to AI models
+                    Puter.js provides intelligent dialogue generation
                 </small>
             </div>
         </div>
         
         <div style="text-align: center; margin-top: 2rem;">
-            <button type="submit" class="btn" onclick="showLoading(this)">
+            <button type="submit" class="btn">
                 <i class="fas fa-comments"></i>
-                Generate Dialogue
+                Generate Dialogue (No JS)
             </button>
         </div>
     </form>
-</div>
-
-<div class="card">
-    <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">
-        <i class="fas fa-lightbulb"></i> Tips for Better Results
-    </h3>
-    
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
-        <div style="background: rgba(102, 126, 234, 0.05); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--primary-color);">
-            <h4 style="color: var(--primary-color); margin-bottom: 0.5rem;">
-                <i class="fas fa-target"></i> Be Specific
-            </h4>
-            <p style="font-size: 0.9rem; color: var(--text-secondary);">
-                Instead of "explain this document," try "help me understand the main benefits and implementation challenges of RAG systems."
-            </p>
-        </div>
-        
-        <div style="background: rgba(16, 185, 129, 0.05); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--success-color);">
-            <h4 style="color: var(--success-color); margin-bottom: 0.5rem;">
-                <i class="fas fa-users"></i> Think About Your Audience
-            </h4>
-            <p style="font-size: 0.9rem; color: var(--text-secondary);">
-                Choose the right difficulty level and tone based on who would benefit from this dialogue.
-            </p>
-        </div>
-        
-        <div style="background: rgba(245, 158, 11, 0.05); padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--warning-color);">
-            <h4 style="color: var(--warning-color); margin-bottom: 0.5rem;">
-                <i class="fas fa-clock"></i> Processing Time
-            </h4>
-            <p style="font-size: 0.9rem; color: var(--text-secondary);">
-                Dialogue generation typically takes 10-30 seconds depending on document complexity and API response time.
-            </p>
-        </div>
-    </div>
 </div>
 
 <div style="text-align: center; margin-top: 2rem;">
@@ -164,31 +130,12 @@
 </div>
 
 <script>
-// Auto-focus on the goal textarea
+// Simple auto-focus without complex JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     const goalTextarea = document.querySelector('textarea[name="user_goal"]');
     if (goalTextarea) {
         goalTextarea.focus();
     }
-    
-    // Character counter for goal textarea
-    goalTextarea.addEventListener('input', function() {
-        const length = this.value.length;
-        const maxLength = 500;
-        
-        if (length > maxLength * 0.8) {
-            let counter = this.parentElement.querySelector('.char-counter');
-            if (!counter) {
-                counter = document.createElement('div');
-                counter.className = 'char-counter';
-                counter.style.cssText = 'font-size: 0.8rem; color: var(--text-secondary); text-align: right; margin-top: 0.5rem;';
-                this.parentElement.appendChild(counter);
-            }
-            
-            counter.textContent = `${length}/${maxLength}`;
-            counter.style.color = length > maxLength ? 'var(--error-color)' : 'var(--text-secondary)';
-        }
-    });
 });
 </script>
 {% endblock %}

@@ -13,8 +13,27 @@ from dotenv import load_dotenv
 from rich.console import Console
 
 from .dialogue_ai import DialogueAI
+from .puter_dialogue_generator import PuterDialogueGenerator, PuterDialogueConfig
 
 console = Console()
+
+def create_puter_dialogue(rag, user_goal, tone, level):
+    """Generate dialogue using Puter.js instead of OpenAI"""
+    # Get context from RAG system
+    context = rag.get_context_for_query(user_goal, max_tokens=2500)
+    
+    # Create Puter.js dialogue generator
+    config = PuterDialogueConfig(
+        tone=tone,
+        level=level,
+        max_turns=12,
+        temperature=0.7,
+        model_name="gpt-4o-mini"
+    )
+    
+    generator = PuterDialogueGenerator(config)
+    dialogue = generator.generate(user_goal, context)
+    return dialogue
 
 
 def main():
@@ -30,7 +49,10 @@ def main():
 
     args = parser.parse_args()
 
-    ai = DialogueAI(tone=args.tone, level=args.level)
+    # Check environment for embedding preference
+    use_openai = os.getenv("USE_OPENAI", "true").lower() == "true"
+    
+    ai = DialogueAI(tone=args.tone, level=args.level, use_openai_embeddings=use_openai)
 
     if args.index:
         if not args.file:
@@ -40,13 +62,28 @@ def main():
         return
 
     if args.ask:
-        dialogue = ai.create_dialogue(file_path=args.file, user_goal=args.ask, top_k=args.top_k)
+        # Index document first
+        if args.file:
+            ai.index_document(args.file)
+        else:
+            # Try loading existing vector store
+            try:
+                ai.rag.load_vector_store()
+            except Exception as e:
+                parser.error("No indexed data found. Provide --file <path> to index a document first.")
+        
+        # Generate dialogue using Puter.js
+        dialogue = create_puter_dialogue(ai.rag, args.ask, args.tone, args.level)
         print(dialogue)
         return
 
     # Default behavior: if file provided, process document; else show help
     if args.file:
-        dialogue = ai.process_document(args.file, tone=args.tone, level=args.level)
+        # Index document
+        ai.index_document(args.file)
+        # Generate default dialogue
+        default_goal = f"Explain the document like a podcast for a {args.level} audience in a {args.tone} tone."
+        dialogue = create_puter_dialogue(ai.rag, default_goal, args.tone, args.level)
         print(dialogue)
     else:
         parser.print_help()

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DialogueAI Test Form</title>
+</head>
+<body>
+    <h1>Test Direct Form Submission</h1>
+    <form action="http://localhost:5001/generate" method="post">
+        <input type="hidden" name="file_id" value="test-id">
+        <input type="hidden" name="filename" value="sample.txt">
+        
+        <label>Goal:</label><br>
+        <textarea name="user_goal" rows="3" cols="50">Explain RAG like a podcast</textarea><br><br>
+        
+        <label>Tone:</label>
+        <select name="tone">
+            <option value="conversational">Conversational</option>
+        </select><br><br>
+        
+        <label>Difficulty:</label>
+        <select name="difficulty">
+            <option value="intermediate">Intermediate</option>
+        </select><br><br>
+        
+        <label>Provider:</label>
+        <select name="provider">
+            <option value="puter">Puter.js (Free)</option>
+        </select><br><br>
+        
+        <button type="submit">Generate Dialogue</button>
+    </form>
+</body>
+</html>

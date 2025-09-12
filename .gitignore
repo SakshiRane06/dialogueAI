@@ -1,5 +1,6 @@
-# Environment variables and API keys
-.env
+# Environment variables and API keys (temporarily commented out for deployment)
+# .env
+.env.production
 .env.local
 .env.*.local
 
@@ -95,3 +96,7 @@ yarn-error.log*
 # Backup files
 *.bak
 *.backup
+
+# Runtime directories
+uploads/
+data/vector_store/

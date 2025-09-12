@@ -1,10 +1,6 @@
+#!/usr/bin/env python3
 """
-DialogueAI Web Application
-
-A Flask-based web interface for the DialogueAI system that allows users to:
-1. Upload PDF documents
-2. Generate AI-powered dialogues
-3. View and download results
+Debug version of web_app.py with enhanced logging
 """
 
 import os
@@ -62,21 +58,26 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-class WebDialogueGenerator:
-    """Simplified dialogue generator for web interface."""
+class DebugWebDialogueGenerator:
+    """Debug version with enhanced logging"""
     
     def __init__(self):
+        print("🔧 Initializing DebugWebDialogueGenerator")
         self.processor = DocumentProcessor()
         self.rag = None
         
     def process_document(self, file_path: str) -> tuple:
         """Process uploaded document and return content and stats."""
         try:
+            print(f"📄 Processing document: {file_path}")
+            
             # Process document
             content = self.processor.process_document(Path(file_path))
             cleaned_content = self.processor.clean_text(content)
+            print(f"✅ Document content extracted: {len(cleaned_content)} characters")
             
             # Initialize RAG system (use SentenceTransformers to avoid quota issues)
+            print("🔧 Initializing RAG system...")
             self.rag = RAGSystem(
                 use_openai=False,  # Force SentenceTransformers to avoid OpenAI quota issues
                 chunk_size=800,
@@ -94,33 +95,78 @@ class WebDialogueGenerator:
                 'using_openai': self.rag.use_openai
             }
             
+            print(f"✅ Document processed successfully - Stats: {stats}")
             return cleaned_content, stats, True
             
         except Exception as e:
+            print(f"❌ Error processing document: {str(e)}")
             return str(e), {}, False
     
     def generate_dialogue(self, user_goal: str, tone: str = "conversational", difficulty: str = "intermediate", provider: str = "auto") -> tuple:
         """Generate dialogue using the processed document."""
         try:
-            if not self.rag or not self.rag.vector_store:
-                return "Error: No document processed", False
+            print(f"🗣️ Starting dialogue generation:")
+            print(f"   - Goal: {user_goal}")
+            print(f"   - Tone: {tone}")
+            print(f"   - Difficulty: {difficulty}")
+            print(f"   - Provider: {provider}")
             
+            if not self.rag or not self.rag.vector_store:
+                error_msg = "Error: No document processed"
+                print(f"❌ {error_msg}")
+                return error_msg, False
+            
+            print("🔍 Getting context from RAG system...")
             # Get context from RAG system
             context = self.rag.get_context_for_query(user_goal, max_tokens=2500)
+            print(f"✅ Context retrieved: {len(context)} characters")
             
             # Choose AI provider based on preference and availability
+            print(f"🤖 Selecting provider: {provider}")
             if provider == "puter" or (provider == "auto" and PUTER_AVAILABLE):
+                print("🟢 Using Puter.js")
                 dialogue = self._generate_with_puter(user_goal, context, tone, difficulty)
             elif provider == "google" or (provider == "auto" and os.getenv('GOOGLE_API_KEY') and GOOGLE_AI_AVAILABLE):
+                print("🟢 Using Google AI")
                 google_api_key = os.getenv('GOOGLE_API_KEY')
                 dialogue = self._generate_with_google(user_goal, context, tone, difficulty, google_api_key)
             else:
+                print("🟡 Using mock dialogue")
                 dialogue = self._generate_mock_dialogue(user_goal, context, tone, difficulty)
             
+            print(f"✅ Dialogue generated: {len(dialogue)} characters")
             return dialogue, True
             
         except Exception as e:
-            return f"Error generating dialogue: {str(e)}", False
+            error_msg = f"Error generating dialogue: {str(e)}"
+            print(f"❌ {error_msg}")
+            import traceback
+            traceback.print_exc()
+            return error_msg, False
+    
+    def _generate_with_puter(self, user_goal: str, context: str, tone: str, difficulty: str) -> str:
+        """Generate dialogue using Puter.js (free, no API key required)."""
+        try:
+            print("🔧 Creating Puter.js generator...")
+            from src.puter_dialogue_generator import PuterDialogueGenerator, PuterDialogueConfig
+            
+            config = PuterDialogueConfig(
+                tone=tone,
+                level=difficulty,
+                max_turns=12,
+                temperature=0.7,
+                model_name="gpt-4o-mini"  # Free model via Puter.js
+            )
+            
+            generator = PuterDialogueGenerator(config)
+            dialogue = generator.generate(user_goal, context)
+            
+            print("✅ Puter.js dialogue generated successfully")
+            return dialogue
+            
+        except Exception as e:
+            print(f"⚠️ Puter.js generation failed: {e}, falling back to mock")
+            return self._generate_mock_dialogue(user_goal, context, tone, difficulty)
     
     def _generate_with_google(self, user_goal: str, context: str, tone: str, difficulty: str, api_key: str) -> str:
         """Generate dialogue using Google AI."""
@@ -178,27 +224,7 @@ Generate the dialogue now.
                     return self._generate_mock_dialogue(user_goal, context, tone, difficulty)
             
         except Exception as e:
-            return self._generate_mock_dialogue(user_goal, context, tone, difficulty)
-    
-    def _generate_with_puter(self, user_goal: str, context: str, tone: str, difficulty: str) -> str:
-        """Generate dialogue using Puter.js (free, no API key required)."""
-        try:
-            from src.puter_dialogue_generator import PuterDialogueGenerator, PuterDialogueConfig
-            
-            config = PuterDialogueConfig(
-                tone=tone,
-                level=difficulty,
-                max_turns=12,
-                temperature=0.7,
-                model_name="gpt-4o-mini"  # Free model via Puter.js
-            )
-            
-            generator = PuterDialogueGenerator(config)
-            dialogue = generator.generate(user_goal, context)
-            
-            return dialogue
-            
-        except Exception as e:
+            print(f"⚠️ Google AI generation failed: {e}, falling back to mock")
             return self._generate_mock_dialogue(user_goal, context, tone, difficulty)
     
     def _generate_mock_dialogue(self, user_goal: str, context: str, tone: str, difficulty: str) -> str:
@@ -240,19 +266,24 @@ dialogue_generators = {}
 @app.route('/')
 def index():
     """Home page with file upload form."""
+    print("🏠 Home page accessed")
     return render_template('index.html')
 
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload and processing."""
+    print("📤 Upload request received")
+    
     if 'file' not in request.files:
+        print("❌ No file in request")
         flash('No file selected')
         return redirect(url_for('index'))
     
     file = request.files['file']
     
     if file.filename == '':
+        print("❌ Empty filename")
         flash('No file selected')
         return redirect(url_for('index'))
     
@@ -262,12 +293,15 @@ def upload_file():
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{file_id}_{filename}")
         
+        print(f"📁 Processing file: {filename} -> {file_path}")
+        
         try:
             # Save uploaded file
             file.save(file_path)
+            print(f"✅ File saved to: {file_path}")
             
             # Create new dialogue generator for this session
-            session_dialogue_gen = WebDialogueGenerator()
+            session_dialogue_gen = DebugWebDialogueGenerator()
             
             # Process document
             content, stats, success = session_dialogue_gen.process_document(file_path)
@@ -275,6 +309,7 @@ def upload_file():
             if success:
                 # Store the dialogue generator for this session
                 dialogue_generators[file_id] = session_dialogue_gen
+                print(f"✅ Stored dialogue generator for session: {file_id}")
                 
                 # Store session data (in production, use proper session management)
                 session_data = {
@@ -284,15 +319,18 @@ def upload_file():
                     'processed': True
                 }
                 
-                return render_template('processed.html', 
+                print(f"✅ Rendering processed_simple.html with stats: {stats}")
+                return render_template('processed_simple.html', 
                                      filename=filename,
                                      stats=stats,
                                      file_id=file_id)
             else:
+                print(f"❌ Processing failed: {content}")
                 flash(f'Error processing file: {content}')
                 return redirect(url_for('index'))
                 
         except Exception as e:
+            print(f"❌ Upload error: {str(e)}")
             flash(f'Error uploading file: {str(e)}')
             return redirect(url_for('index'))
         
@@ -300,8 +338,10 @@ def upload_file():
             # Clean up uploaded file
             if os.path.exists(file_path):
                 os.remove(file_path)
+                print(f"🗑️ Cleaned up: {file_path}")
     
     else:
+        print(f"❌ Invalid file type: {file.filename}")
         flash('Invalid file type. Please upload PDF, TXT, or DOCX files.')
         return redirect(url_for('index'))
 
@@ -309,32 +349,51 @@ def upload_file():
 @app.route('/generate', methods=['POST'])
 def generate():
     """Generate dialogue based on user input."""
+    print("🗣️ Generate request received")
+    
     try:
         user_goal = request.form.get('user_goal', '').strip()
         tone = request.form.get('tone', 'conversational')
         difficulty = request.form.get('difficulty', 'intermediate')
-        provider = request.form.get('provider', 'auto')  # New provider parameter
+        provider = request.form.get('provider', 'auto')
         file_id = request.form.get('file_id', '')
         filename = request.form.get('filename', 'document')
         
+        print(f"📝 Form data received:")
+        print(f"   - user_goal: {user_goal}")
+        print(f"   - tone: {tone}")
+        print(f"   - difficulty: {difficulty}")
+        print(f"   - provider: {provider}")
+        print(f"   - file_id: {file_id}")
+        print(f"   - filename: {filename}")
+        
         if not user_goal:
+            print("❌ No user goal provided")
             flash('Please provide a goal for the dialogue')
             return redirect(url_for('index'))
         
         # Get the dialogue generator for this session
         if file_id not in dialogue_generators:
+            print(f"❌ Session {file_id} not found in dialogue_generators")
+            print(f"Available sessions: {list(dialogue_generators.keys())}")
             flash('Session expired. Please upload your document again.')
             return redirect(url_for('index'))
         
         session_dialogue_gen = dialogue_generators[file_id]
+        print(f"✅ Retrieved dialogue generator for session: {file_id}")
         
         # Generate dialogue with selected provider
+        print("🚀 Starting dialogue generation...")
         dialogue, success = session_dialogue_gen.generate_dialogue(user_goal, tone, difficulty, provider)
         
         if success:
+            print("✅ Dialogue generation successful!")
+            
             # Save dialogue to file
             output_filename = f"dialogue_{file_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
             output_path = os.path.join(RESULTS_FOLDER, output_filename)
+            
+            print(f"💾 Saving dialogue to: {output_path}")
             
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(f"DialogueAI Generated Conversation\n")
@@ -349,7 +408,9 @@ def generate():
             # Clean up the dialogue generator to free memory
             if file_id in dialogue_generators:
                 del dialogue_generators[file_id]
+                print(f"🗑️ Cleaned up session: {file_id}")
             
+            print("✅ Rendering result.html")
             return render_template('result.html',
                                  dialogue=dialogue,
                                  user_goal=user_goal,
@@ -358,10 +419,14 @@ def generate():
                                  filename=filename,
                                  output_file=output_filename)
         else:
+            print(f"❌ Dialogue generation failed: {dialogue}")
             flash(f'Error generating dialogue: {dialogue}')
             return redirect(url_for('index'))
     
     except Exception as e:
+        print(f"❌ Generate error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         flash(f'Error: {str(e)}')
         return redirect(url_for('index'))
 
@@ -399,14 +464,14 @@ def api_status():
 
 if __name__ == '__main__':
     print("\n" + "="*60)
-    print("🚀 DialogueAI Web Application Starting...")
-    print("📍 Local URL: http://localhost:5000")
-    print("📍 Network URL: http://127.0.0.1:5000")
+    print("🔧 DialogueAI Debug Web Application Starting...")
+    print("📍 Local URL: http://localhost:5001")
+    print("📍 Network URL: http://127.0.0.1:5001")
     print("🛑 Press Ctrl+C to stop the server")
     print("="*60 + "\n")
     
     try:
-        app.run(debug=True, host='127.0.0.1', port=5000, threaded=True)
+        app.run(debug=True, host='127.0.0.1', port=5001, threaded=True)
     except KeyboardInterrupt:
         print("\n👋 Server stopped by user")
     except Exception as e:

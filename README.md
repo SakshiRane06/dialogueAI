@@ -4,44 +4,60 @@ An AI-powered system that transforms static documents (PDFs, TXT files) into dyn
 
 ## 🌟 Features
 
-- **Document Ingestion**: Upload PDFs or TXT files
+- **Document Ingestion**: Upload PDFs, TXT, or DOCX files
 - **RAG Integration**: Retrieval-Augmented Generation for accurate content
 - **Dialogue Generation**: Creates natural conversations between learner and expert
-- **Agent AI**: Controls tone, style, and flow
-- **Multiple Outputs**: Text, audio (TTS), and optional video
+- **Multiple AI Providers**: OpenAI, Google Gemini, and Puter.js (free!)
+- **Agent Intelligence**: Smart content analysis and dialogue strategies
+- **Web Interface**: Beautiful Flask-based web application
+- **CLI Interface**: Command-line tools for batch processing
 
-## 🛠️ Tech Stack
+## 🛐️ Tech Stack
 
 - **Language**: Python 3.8+
-- **AI Framework**: LangChain
-- **Vector DB**: FAISS
-- **LLM**: OpenAI GPT-4
-- **Document Processing**: PyMuPDF, pdfplumber
-- **Optional TTS**: ElevenLabs, pyttsx3
+- **AI Framework**: LangChain + Custom Puter.js Integration
+- **Vector DB**: FAISS with SentenceTransformers embeddings
+- **AI Providers**: OpenAI GPT-4, Google Gemini, Puter.js (free)
+- **Document Processing**: PyMuPDF, pdfplumber, python-docx
+- **Web Framework**: Flask with beautiful UI
+- **Embeddings**: OpenAI embeddings + SentenceTransformers fallback
 
 ## 🚀 Quick Start
 
-1. **Clone and setup**:
-   ```bash
-   git clone <your-repo>
-   cd dialoge-ai
-   pip install -r requirements.txt
-   ```
+### **Method 1: Windows Batch File (Easiest)**
+```bash
+# Double-click or run:
+START_HERE.bat
+```
 
-2. **Configure environment**:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your API keys
-   ```
+### **Method 2: Web Application**
+```bash
+# Install dependencies
+pip install -r requirements.txt
 
-3. **Run a simple example**:
-   ```python
-   from src.dialogue_ai import DialogueAI
-   
-   ai = DialogueAI()
-   result = ai.process_document("data/sample.pdf", tone="casual")
-   print(result)
-   ```
+# Start web interface (recommended)
+python debug_web_app.py
+# OR standard version
+python web_app.py
+
+# Open browser to:
+# http://localhost:5001 (debug version)
+# http://localhost:5000 (standard version)
+```
+
+### **Method 3: Command Line**
+```bash
+# Generate dialogue directly
+python -m src.cli --file data/sample.txt --ask "Explain RAG like a podcast"
+
+# Process with custom settings
+python -m src.cli --file data/sample.txt --tone casual --level beginner
+```
+
+### **Method 4: Application Launcher**
+```bash
+python launch_app.py
+```
 
 ## 📁 Project Structure
 
@@ -78,16 +94,45 @@ ai = DialogueAI(
 dialogue = ai.create_dialogue("research_paper.pdf")
 ```
 
+## 🤖 AI Providers
+
+### **Puter.js (Free & Recommended)**
+- ✅ **No API keys required**
+- ✅ **Intelligent context analysis**
+- ✅ **Works out of the box**
+- ✅ **Perfect for testing and development**
+
+### **Google Gemini**
+- Requires `GOOGLE_API_KEY` in .env file
+- High-quality dialogue generation
+- Good for production use
+
+### **OpenAI GPT-4**
+- Requires `OPENAI_API_KEY` in .env file
+- Premium quality responses
+- Higher cost per request
+
 ## 🔧 Development
 
-Run tests:
+### **Testing**
 ```bash
-pytest tests/
+# Test core functionality (no API keys needed)
+python test_demo.py
+
+# Test Puter.js integration
+python test_puter_integration.py
+
+# Test full system
+python test_full_demo.py
 ```
 
-Format code:
+### **Code Quality**
 ```bash
+# Format code
 black src/ tests/
+
+# Lint code
+flake8 src/
 ```
 
 ## 📄 License
