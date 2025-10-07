@@ -19,6 +19,7 @@ from src.document_processor import DocumentProcessor
 from src.rag_system import RAGSystem
 from src.dialogue_generator import DialogueGenerator
 from src.puter_dialogue_generator import PuterDialogueGenerator
+from src.multi_agent_dialogue import MultiAgentDialogue, MultiAgentConfig
 
 # Try to import Google AI, but make it optional
 try:
@@ -102,7 +103,7 @@ class DebugWebDialogueGenerator:
             print(f"❌ Error processing document: {str(e)}")
             return str(e), {}, False
     
-    def generate_dialogue(self, user_goal: str, tone: str = "conversational", difficulty: str = "intermediate", provider: str = "auto") -> tuple:
+    def generate_dialogue(self, user_goal: str, tone: str = "conversational", difficulty: str = "intermediate", provider: str = "auto", quality: str = "standard") -> tuple:
         """Generate dialogue using the processed document."""
         try:
             print(f"🗣️ Starting dialogue generation:")
@@ -110,6 +111,7 @@ class DebugWebDialogueGenerator:
             print(f"   - Tone: {tone}")
             print(f"   - Difficulty: {difficulty}")
             print(f"   - Provider: {provider}")
+            print(f"   - Quality: {quality}")
             
             if not self.rag or not self.rag.vector_store:
                 error_msg = "Error: No document processed"
@@ -121,6 +123,12 @@ class DebugWebDialogueGenerator:
             context = self.rag.get_context_for_query(user_goal, max_tokens=2500)
             print(f"✅ Context retrieved: {len(context)} characters")
             
+            # Multi-agent NotebookLM-style
+            if quality == "notebook":
+                print("🧩 Using multi-agent NotebookLM-style pipeline")
+                dialogue = self._generate_with_multi_agent(user_goal, context, tone, difficulty, provider)
+                return dialogue, True
+
             # Choose AI provider based on preference and availability
             print(f"🤖 Selecting provider: {provider}")
             if provider == "puter" or (provider == "auto" and PUTER_AVAILABLE):
@@ -356,6 +364,7 @@ def generate():
         tone = request.form.get('tone', 'conversational')
         difficulty = request.form.get('difficulty', 'intermediate')
         provider = request.form.get('provider', 'auto')
+        quality = request.form.get('quality', 'standard')
         file_id = request.form.get('file_id', '')
         filename = request.form.get('filename', 'document')
         
@@ -364,6 +373,7 @@ def generate():
         print(f"   - tone: {tone}")
         print(f"   - difficulty: {difficulty}")
         print(f"   - provider: {provider}")
+        print(f"   - quality: {quality}")
         print(f"   - file_id: {file_id}")
         print(f"   - filename: {filename}")
         
@@ -384,7 +394,7 @@ def generate():
         
         # Generate dialogue with selected provider
         print("🚀 Starting dialogue generation...")
-        dialogue, success = session_dialogue_gen.generate_dialogue(user_goal, tone, difficulty, provider)
+        dialogue, success = session_dialogue_gen.generate_dialogue(user_goal, tone, difficulty, provider, quality)
         
         if success:
             print("✅ Dialogue generation successful!")
@@ -477,3 +487,8 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"❌ Error starting server: {e}")
         input("Press Enter to exit...")
+    def _generate_with_multi_agent(self, user_goal: str, context: str, tone: str, difficulty: str, provider: str) -> str:
+        """Generate dialogue using the multi-agent pipeline (NotebookLM-style)."""
+        cfg = MultiAgentConfig(tone=tone, level=difficulty, max_turns=12, style_mode="notebook")
+        composer = MultiAgentDialogue(cfg)
+        return composer.generate(user_goal, context, provider)

@@ -100,3 +100,5 @@ yarn-error.log*
 # Runtime directories
 uploads/
 data/vector_store/
+# Environment files (do not commit secrets)
+.env

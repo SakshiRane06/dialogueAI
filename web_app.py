@@ -23,6 +23,7 @@ from src.document_processor import DocumentProcessor
 from src.rag_system import RAGSystem
 from src.dialogue_generator import DialogueGenerator
 from src.puter_dialogue_generator import PuterDialogueGenerator
+from src.multi_agent_dialogue import MultiAgentDialogue, MultiAgentConfig
 
 # Try to import Google AI, but make it optional
 try:
@@ -99,7 +100,7 @@ class WebDialogueGenerator:
         except Exception as e:
             return str(e), {}, False
     
-    def generate_dialogue(self, user_goal: str, tone: str = "conversational", difficulty: str = "intermediate", provider: str = "auto") -> tuple:
+    def generate_dialogue(self, user_goal: str, tone: str = "conversational", difficulty: str = "intermediate", provider: str = "auto", quality: str = "standard") -> tuple:
         """Generate dialogue using the processed document."""
         try:
             if not self.rag or not self.rag.vector_store:
@@ -108,6 +109,11 @@ class WebDialogueGenerator:
             # Get context from RAG system
             context = self.rag.get_context_for_query(user_goal, max_tokens=2500)
             
+            # Use multi-agent NotebookLM-style if requested
+            if quality == "notebook":
+                dialogue = self._generate_with_multi_agent(user_goal, context, tone, difficulty, provider)
+                return dialogue, True
+
             # Choose AI provider based on preference and availability
             if provider == "puter" or (provider == "auto" and PUTER_AVAILABLE):
                 dialogue = self._generate_with_puter(user_goal, context, tone, difficulty)
@@ -121,6 +127,13 @@ class WebDialogueGenerator:
             
         except Exception as e:
             return f"Error generating dialogue: {str(e)}", False
+
+    def _generate_with_multi_agent(self, user_goal: str, context: str, tone: str, difficulty: str, provider: str) -> str:
+        """Generate dialogue using the multi-agent pipeline (NotebookLM-style)."""
+        cfg = MultiAgentConfig(tone=tone, level=difficulty, max_turns=12, style_mode="notebook")
+        composer = MultiAgentDialogue(cfg)
+        # Pass provider to allow Gemini-backed composition when available
+        return composer.generate(user_goal, context, provider)
     
     def _generate_with_google(self, user_goal: str, context: str, tone: str, difficulty: str, api_key: str) -> str:
         """Generate dialogue using Google AI."""
@@ -314,6 +327,7 @@ def generate():
         tone = request.form.get('tone', 'conversational')
         difficulty = request.form.get('difficulty', 'intermediate')
         provider = request.form.get('provider', 'auto')  # New provider parameter
+        quality = request.form.get('quality', 'standard')
         file_id = request.form.get('file_id', '')
         filename = request.form.get('filename', 'document')
         
@@ -329,7 +343,7 @@ def generate():
         session_dialogue_gen = dialogue_generators[file_id]
         
         # Generate dialogue with selected provider
-        dialogue, success = session_dialogue_gen.generate_dialogue(user_goal, tone, difficulty, provider)
+        dialogue, success = session_dialogue_gen.generate_dialogue(user_goal, tone, difficulty, provider, quality)
         
         if success:
             # Save dialogue to file
