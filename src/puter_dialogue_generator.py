@@ -51,19 +51,19 @@ class PuterDialogueGenerator:
         """Create a structured prompt for high-quality, grounded dialogue."""
         
         system_instructions = f"""
-You are DialogueAI, tasked with crafting a clear, engaging two-person dialogue between a curious Learner (👦 Learner) and a knowledgeable Expert (👨 Expert). The dialogue must be grounded in the provided CONTEXT.
+You are DialogueAI, tasked with crafting a clear, engaging two-person dialogue between a curious Host (👩 Host) and a knowledgeable Expert (👨 Expert). The dialogue must be grounded in the provided CONTEXT.
 
 Guidelines:
 - Tone: {self.config.tone}
 - Difficulty: {self.config.level}
-- Max turns: {self.config.max_turns} (each turn is a pair: Learner then Expert)
+- Max turns: {self.config.max_turns} (each turn is a pair: Host then Expert)
 - Prefer short, natural utterances
 - Encourage progressive disclosure: start broad, then deepen based on CONTEXT
-- Explicitly cite references using [Source: <source>, Chunk <n>] when a point is taken from context
+- Do not include citations or bracketed sources in the output
 - If the context lacks information, say so briefly and avoid fabricating details
-- Output MUST strictly alternate speakers and start with the Learner
+- Output MUST strictly alternate speakers and start with the Host
 - Output format must be plain text like:
-👦 Learner: <line>
+👩 Host: <line>
 👨 Expert: <line>
 ...
 """
@@ -72,7 +72,7 @@ Guidelines:
 USER_GOAL:
 {user_goal}
 
-CONTEXT (use selectively and cite):
+CONTEXT (use selectively):
 {context}
 
 Produce the dialogue now.
@@ -204,61 +204,59 @@ Produce the dialogue now.
         main_topic = goal_info['main_topic']
         focus = goal_info['focus']
         
-        # Start with learner question
+        # Start with host question
         dialogue_parts = []
         
         # Opening based on user goal
         if focus == "explanation":
-            dialogue_parts.append(f"👦 Learner: I'd like to understand {main_topic} better. Can you explain what it is?")
+            dialogue_parts.append(f"👩 Host: I've been trying to wrap my head around {main_topic}. What is it, simply?")
         elif focus == "process":
-            dialogue_parts.append(f"👦 Learner: Can you walk me through how {main_topic} works?")
+            dialogue_parts.append(f"👩 Host: Can you walk me through how {main_topic} works?")
         elif focus == "benefits":
-            dialogue_parts.append(f"👦 Learner: What are the main benefits of {main_topic}?")
+            dialogue_parts.append(f"👩 Host: What are the main benefits of {main_topic}?")
         elif focus == "examples":
-            dialogue_parts.append(f"👦 Learner: Can you give me some practical examples of {main_topic}?")
+            dialogue_parts.append(f"👩 Host: Could you share a practical example of {main_topic}?")
         else:
-            dialogue_parts.append(f"👦 Learner: I'd like to learn about {main_topic}. Where should I start?")
+            dialogue_parts.append(f"👩 Host: I'd like to learn about {main_topic}. Where should I start?")
         
-        # Expert response with definition if available
+        # Expert response with definition if available (no source tags)
         if context_info['definitions']:
             definition = context_info['definitions'][0]
-            source_ref = f" [Source: {context_info['sources'][0][0]}, Chunk {context_info['sources'][0][1]}]" if context_info['sources'] else ""
-            dialogue_parts.append(f"👨 Expert: Great question! {definition}{source_ref}")
+            dialogue_parts.append(f"👨 Expert: Great question! {definition}")
         else:
-            dialogue_parts.append(f"👨 Expert: Excellent! {main_topic} is a fascinating topic. Let me break it down for you based on the information we have.")
+            dialogue_parts.append(f"👨 Expert: Excellent! {main_topic} is a fascinating topic. Let me break it down in plain terms.")
         
-        # Learner asks for more detail
-        dialogue_parts.append("👦 Learner: That's helpful! Can you tell me more about the key concepts?")
+        # Host asks for more detail
+        dialogue_parts.append("👩 Host: That helps. What are the key ideas I should know?")
         
-        # Expert explains key terms
+        # Expert explains key terms, naturally
         if context_info['key_terms']:
             key_terms_str = ", ".join(context_info['key_terms'][:3])
-            dialogue_parts.append(f"👨 Expert: Absolutely! The main concepts to understand are {key_terms_str}. These are fundamental to grasping how everything works together.")
+            dialogue_parts.append(f"👨 Expert: A few big ideas show up a lot: {key_terms_str}. They make the whole picture much clearer.")
         else:
-            dialogue_parts.append("👨 Expert: The key concepts involve several interconnected ideas that build upon each other. Let me walk you through them systematically.")
+            dialogue_parts.append("👨 Expert: Think of it as a set of connected ideas that build on each other. I'll keep it simple and practical.")
         
-        # Learner asks about benefits if available
+        # Host asks about benefits if available
         if context_info['benefits']:
-            dialogue_parts.append("👦 Learner: What makes this approach so valuable? What are the main advantages?")
+            dialogue_parts.append("👩 Host: What makes this approach valuable?")
             benefit = context_info['benefits'][0].replace('\n', ' ').strip()
-            source_ref = f" [Source: {context_info['sources'][0][0]}, Chunk {context_info['sources'][0][1]}]" if context_info['sources'] else ""
-            dialogue_parts.append(f"👨 Expert: Great question! {benefit}{source_ref}")
+            dialogue_parts.append(f"👨 Expert: Good call. {benefit}")
         
-        # Learner asks about examples if available
+        # Host asks about examples if available
         if context_info['examples']:
-            dialogue_parts.append("👦 Learner: Can you give me a concrete example to make this clearer?")
+            dialogue_parts.append("👩 Host: Could you give a concrete example?")
             example = context_info['examples'][0].replace('\n', ' ').strip()
-            dialogue_parts.append(f"👨 Expert: Certainly! {example} This shows how the concepts apply in practice.")
+            dialogue_parts.append(f"👨 Expert: Sure. {example} It shows how the ideas work in practice.")
         
-        # Learner asks about challenges if available
+        # Host asks about challenges if available
         if context_info['challenges']:
-            dialogue_parts.append("👦 Learner: Are there any challenges or limitations I should be aware of?")
+            dialogue_parts.append("👩 Host: Are there any trade-offs or limitations?")
             challenge = context_info['challenges'][0].replace('\n', ' ').strip()
-            dialogue_parts.append(f"👨 Expert: That's a thoughtful question. {challenge} It's important to understand both the strengths and limitations.")
+            dialogue_parts.append(f"👨 Expert: Definitely worth noting. {challenge} Understanding both strengths and limits helps.")
         
         # Closing exchange
-        dialogue_parts.append("👦 Learner: This has been really enlightening! What would you recommend as next steps for learning more?")
-        dialogue_parts.append("👨 Expert: I'm glad this was helpful! I'd suggest diving deeper into the specific areas that interest you most, and don't hesitate to explore the source material for additional details.")
+        dialogue_parts.append("👩 Host: This was super clear. What should I do next?")
+        dialogue_parts.append("👨 Expert: Follow your curiosity—pick one area to dive deeper, and use the document as a guide for details.")
         
         return "\n\n".join(dialogue_parts)
     
@@ -267,21 +265,25 @@ Produce the dialogue now.
         topic_words = user_goal.lower().split()
         key_topic = "the topic" if not topic_words else " ".join(topic_words[:3])
         
-        return f"""👦 Learner: I'd like to understand {key_topic} better. Can you help explain it?
+        return f"""👩 Host: I've been trying to understand {key_topic}. Can you explain it?
 
-👨 Expert: Absolutely! Based on the information we have, {key_topic} is an important concept. Let me break it down for you.
+👨 Expert: Absolutely. Based on what we have, {key_topic} matters for a few clear reasons. Let me keep it simple.
 
-👦 Learner: That sounds great! What's the most important thing I should know first?
+👩 Host: What's the first thing I should know?
 
-👨 Expert: The key thing to understand is that this topic connects to several important areas. From the context provided, we can see specific details that help explain the fundamentals.
+👨 Expert: Start with the core idea, then add the most practical pieces. That makes the rest easier.
 
-👦 Learner: Can you give me a concrete example to make it clearer?
+👩 Host: Can you give a quick example?
 
-👨 Expert: Certainly! Think of it this way - the practical applications show us how these concepts work in real situations. The documentation provides specific examples that illustrate the main points.
+👨 Expert: Sure—think of a small, real case where the core idea shows up and helps. That makes the concept concrete.
 
-👦 Learner: Perfect! What would be a good next step for me to learn more?
+👩 Host: Nice. What could go wrong?
 
-👨 Expert: I'd recommend starting with the foundational concepts we've discussed, then exploring the specific examples in the context. This will give you a solid base to build upon.
+👨 Expert: There are trade-offs. Knowing them helps you use the idea well without surprises.
+
+👩 Host: Great. Where should I go next?
+
+👨 Expert: Pick one part that interests you and explore it. Your document has details you can use to go deeper.
 
 📝 Note: Generated using Puter.js approach with intelligent context analysis."""
 

@@ -51,9 +51,7 @@
             <button onclick="copyDialogue()" class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
                 <i class="fas fa-copy"></i> Copy
             </button>
-            <a href="/download/{{ output_file }}" class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
-                <i class="fas fa-download"></i> Download
-            </a>
+            <!-- Download removed: output is shown only on the website -->
         </div>
     </div>
     
@@ -69,6 +67,19 @@
             The dialogue format makes complex topics more engaging and easier to understand.
         </div>
     </div>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">
+        <i class="fas fa-volume-up"></i> Listen to Your Dialogue
+    </h3>
+    <audio id="dialogueAudio" controls style="width:100%; outline:none;"></audio>
+    <div style="text-align:center; margin-top:1rem;">
+        <button id="makeAudioBtn" class="btn"><i class="fas fa-microphone"></i> Generate Audio</button>
+    </div>
+    <small style="color: var(--text-secondary); display:block; margin-top:0.5rem;">
+        Audio generated via ElevenLabs (requires `ELEVENLABS_API_KEY`).
+    </small>
 </div>
 
 <div class="card">
@@ -215,5 +226,31 @@ document.getElementById('dialogueText').addEventListener('click', function() {
         selection.removeAllRanges();
     }, 2000);
 });
+// Generate audio via POST to /tts and wire to player
+const makeBtn = document.getElementById('makeAudioBtn');
+if (makeBtn) {
+    makeBtn.addEventListener('click', async function() {
+        const textEl = document.getElementById('dialogueText');
+        const text = (textEl ? textEl.textContent : '').trim();
+        if (!text) {
+            alert('No dialogue text available.');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('text', text);
+        try {
+            const res = await fetch('/tts_eleven', { method: 'POST', body: formData });
+            if (!res.ok) throw new Error('Audio generation failed');
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const audio = document.getElementById('dialogueAudio');
+            audio.src = url;
+            audio.play().catch(() => {});
+        } catch (err) {
+            console.error(err);
+            alert('Audio generation failed. Check the server logs.');
+        }
+    });
+}
 </script>
 {% endblock %}

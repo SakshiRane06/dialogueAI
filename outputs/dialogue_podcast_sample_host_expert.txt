@@ -1,0 +1,29 @@
+🎙️ Host: Today we’re unpacking Retrieval-Augmented Generation — RAG. At a high level, what is it and why should we care?
+🧠 Expert: RAG combines retrieval and generation so a language model can consult external knowledge at response time, producing answers grounded in relevant sources. [Source: sample.txt, Chunk 1]
+
+🎙️ Host: Walk me through the mechanics. How does a RAG system work end-to-end?
+🧠 Expert: Two phases. First, retrieval: we embed the query and the corpus, then search a vector database to fetch the most similar passages. Second, generation: the LLM uses those passages as context to draft a response. [Source: sample.txt, Chunks 2–3]
+
+🎙️ Host: What are the core building blocks we’d expect in a typical implementation?
+🧠 Expert: You’ll see an embedding model, a vector database for fast similarity search, a retrieval component to pick top chunks, a language model to compose the answer, and a chunking strategy to split documents. [Source: sample.txt, Chunk 4]
+
+🎙️ Host: Ok, benefits — what does RAG buy us over a plain LLM?
+🧠 Expert: Up-to-date information without retraining, reduced hallucinations by grounding in source text, domain customization, visible citation trails, and often lower cost versus constant fine-tuning. [Source: sample.txt, Chunk 5]
+
+🎙️ Host: Where do teams use this in the real world?
+🧠 Expert: Customer support, research assistants, education, legal and medical review, and enterprise knowledge management — anywhere answers need both fluency and provenance. [Source: sample.txt, Chunk 6]
+
+🎙️ Host: Let’s get concrete. Suppose a user asks about a policy detail.
+🧠 Expert: The retriever pulls the policy sections; the model then quotes or summarizes those passages with references, avoiding invented facts. That’s the RAG edge. [Source: sample.txt, Chunks 2–3]
+
+🎙️ Host: Any common challenges or caveats I should watch for?
+🧠 Expert: Retrieval quality hinges on good embeddings and chunking; relevance can be imperfect; and there’s added compute for embedding and search. Integration between retrieval and generation also needs care. [Source: sample.txt, Chunk 7]
+
+🎙️ Host: What improvements are on the horizon?
+🧠 Expert: Better embedding models, smarter chunking, multi-modal RAG that handles tables or images, real-time KB updates, and tighter pairing with fine-tuned LLMs. [Source: sample.txt, Chunk 8]
+
+🎙️ Host: If I’m starting from scratch, what’s a sensible first step?
+🧠 Expert: Pick a clean corpus, add sensible chunking, use a solid sentence-transformer for embeddings, and pilot answers with citations. Iterate on retrieval quality before chasing model size. [Source: sample.txt, Chunk 4]
+
+🎙️ Host: Perfect — quick summary to close?
+🧠 Expert: RAG is a practical way to make LLMs reliable by grounding them in retrieved evidence, keeping responses fluent and verifiable. [Source: sample.txt, Chunk 9]

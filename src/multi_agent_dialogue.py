@@ -24,6 +24,9 @@ class MultiAgentConfig:
     level: str = "intermediate"
     max_turns: int = 12  # pairs of Learner/Expert utterances
     style_mode: str = "notebook"  # reserved for future styles
+    # New: configurable role labels for output formatting
+    learner_label: str = "🎙️ Host"
+    expert_label: str = "🧠 Expert"
 
 
 class NotesAgent:
@@ -126,14 +129,14 @@ class WriterAgent:
         return intent
 
     def write(self, plan: List[Dict[str, str]], notes: Dict[str, any]) -> str:
-        # Compose natural, short utterances
+        # Compose natural, short utterances using configurable role labels
         parts: List[str] = []
         for step in plan:
             l = step.get("learner", "")
             e_intent = step.get("expert", "")
-            parts.append(f"👦 Learner: {l}")
+            parts.append(f"{self.cfg.learner_label}: {l}")
             e_line = self._compose_line(e_intent, notes)
-            parts.append(f"👨 Expert: {e_line}")
+            parts.append(f"{self.cfg.expert_label}: {e_line}")
         return "\n\n".join(parts)
 
 
@@ -172,10 +175,10 @@ class MultiAgentDialogue:
                 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
                 model = genai.GenerativeModel('gemini-pro')
                 prompt = (
-                    f"You are DialogueAI. Compose a natural, engaging two-person dialogue (Learner/Expert) in a NotebookLM-like style.\n"
+                    f"You are DialogueAI. Compose a natural, engaging two-person dialogue in a NotebookLM-like style.\n"
                     f"Tone: {self.cfg.tone}; Level: {self.cfg.level}; Keep utterances short (1–3 sentences), use contractions, vary rhythm.\n"
-                    f"Follow this plan strictly, alternating speakers starting with Learner. Cite sources like [Source: <source>, Chunk <n>] only when a specific fact is drawn from notes.\n\n"
-                    f"PLAN:\n{plan}\n\nNOTES:\n{notes}\n\nProduce only the dialogue in plain text with 👦 Learner / 👨 Expert lines."
+                    f"Follow this plan strictly, alternating speakers starting with {self.cfg.learner_label.split(':')[0]}. Cite sources like [Source: <source>, Chunk <n>] only when a specific fact is drawn from notes.\n\n"
+                    f"PLAN:\n{plan}\n\nNOTES:\n{notes}\n\nProduce only the dialogue in plain text with lines prefixed by '{self.cfg.learner_label}' and '{self.cfg.expert_label}'."
                 )
                 response = model.generate_content(prompt)
                 composed = response.text if hasattr(response, 'text') else ''

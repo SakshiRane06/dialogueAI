@@ -32,10 +32,14 @@ except Exception:
 # Puter.js is always available (no API key required)
 PUTER_AVAILABLE = True
 
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    print(f"ELEVENLABS_API_KEY present at startup: {bool(os.getenv('ELEVENLABS_API_KEY'))}")
+except Exception as e:
+    print(f"dotenv load failed: {e}")
+except Exception:
+    pass
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-key-change-in-production')
@@ -185,23 +189,23 @@ class DebugWebDialogueGenerator:
             import google.ai.generativelanguage as glm
             
             prompt = f"""
-You are DialogueAI, creating an engaging two-person dialogue between a Learner (👦) and Expert (👨).
+You are DialogueAI, creating an engaging two-person dialogue between a Host (👩) and Expert (👨).
 
 Guidelines:
 - Tone: {tone}
 - Difficulty: {difficulty}
-- Max turns: 12 (each turn is Learner then Expert)
+- Max turns: 12 (each turn is Host then Expert)
 - Use short, natural conversation
 - Start broad, then deepen based on CONTEXT
-- Cite sources as [Source: <source>, Chunk <n>] when using context
-- Must alternate speakers starting with Learner
+- Do not include citations or bracketed sources in the output
+- Must alternate speakers starting with Host
 - Output format:
-👦 Learner: <line>
+👩 Host: <line>
 👨 Expert: <line>
 
 USER GOAL: {user_goal}
 
-CONTEXT (cite when used):
+CONTEXT (use selectively):
 {context}
 
 Generate the dialogue now.
@@ -399,22 +403,9 @@ def generate():
         if success:
             print("✅ Dialogue generation successful!")
             
-            # Save dialogue to file
-            output_filename = f"dialogue_{file_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-            output_path = os.path.join(RESULTS_FOLDER, output_filename)
-            
-            print(f"💾 Saving dialogue to: {output_path}")
-            
-            with open(output_path, 'w', encoding='utf-8') as f:
-                f.write(f"DialogueAI Generated Conversation\n")
-                f.write(f"Source Document: {filename}\n")
-                f.write(f"User Goal: {user_goal}\n")
-                f.write(f"Tone: {tone}\n")
-                f.write(f"Difficulty: {difficulty}\n")
-                f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                f.write("=" * 60 + "\n\n")
-                f.write(dialogue)
-            
+            # Do not save to disk; render inline only on the website
+            print("💾 Skipping file save; rendering inline only")
+
             # Clean up the dialogue generator to free memory
             if file_id in dialogue_generators:
                 del dialogue_generators[file_id]
@@ -426,8 +417,7 @@ def generate():
                                  user_goal=user_goal,
                                  tone=tone,
                                  difficulty=difficulty,
-                                 filename=filename,
-                                 output_file=output_filename)
+                                 filename=filename)
         else:
             print(f"❌ Dialogue generation failed: {dialogue}")
             flash(f'Error generating dialogue: {dialogue}')
@@ -456,20 +446,135 @@ def download_file(filename):
         return redirect(url_for('index'))
 
 
-@app.route('/api/status')
+@app.route('/api/status', methods=['GET'])
 def api_status():
-    """API endpoint to check system status."""
-    openai_key = bool(os.getenv('OPENAI_API_KEY'))
-    google_key = bool(os.getenv('GOOGLE_API_KEY')) and GOOGLE_AI_AVAILABLE
-    
+    import os
     return jsonify({
-        'status': 'running',
-        'openai_available': False,  # Disabled to avoid quota issues
-        'google_available': google_key,
-        'google_ai_installed': GOOGLE_AI_AVAILABLE,
-        'puter_available': PUTER_AVAILABLE,
-        'embedding_fallback': 'SentenceTransformers (quota protection)'
+        'elevenlabs_key_present': bool(os.getenv('ELEVENLABS_API_KEY')),
+        'host_voice': os.getenv('ELEVEN_HOST_VOICE_ID'),
+        'expert_voice': os.getenv('ELEVEN_EXPERT_VOICE_ID')
     })
+
+@app.route('/tts', methods=['POST'])
+def tts_audio():
+    """Generate audio from provided text with alternating voices (Edge TTS)."""
+    try:
+        text = request.form.get('text', '').strip()
+        if not text:
+            return ('Missing text', 400)
+        try:
+            import edge_tts
+            import asyncio, io
+        except Exception:
+            return jsonify({'error': 'edge-tts not installed. Run: pip install edge-tts'}), 500
+
+        async def synth_dual(input_text: str):
+            male_voice = 'en-US-GuyNeural'
+            female_voice = 'en-US-JennyNeural'
+            lines = [ln.strip() for ln in input_text.splitlines() if ln.strip()]
+            buf = io.BytesIO()
+            for ln in lines:
+                is_expert = ln.startswith('👨') or ln.lower().startswith('expert:')
+                voice = male_voice if is_expert else female_voice
+                spoken = ln.split(':', 1)[1].strip() if ':' in ln else ln
+                comm = edge_tts.Communicate(spoken, voice=voice)
+                async for chunk in comm.stream():
+                    if chunk["type"] == "audio":
+                        buf.write(chunk["data"])
+            buf.seek(0)
+            return buf
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        audio_buf = loop.run_until_complete(synth_dual(text))
+        loop.close()
+        return send_file(audio_buf, mimetype='audio/mpeg', as_attachment=False, download_name='dialogue_dual.mp3')
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/tts_eleven', methods=['POST'])
+def tts_eleven():
+    """Generate audio using ElevenLabs, alternating voices by speaker labels."""
+    try:
+        text = request.form.get('text', '').strip()
+        if not text:
+            return ('Missing text', 400)
+        import os, io, requests
+        api_key = os.getenv('ELEVENLABS_API_KEY')
+        if not api_key:
+            return jsonify({'error': 'ELEVENLABS_API_KEY not set in environment'}), 500
+        host_voice_id = os.getenv('ELEVEN_HOST_VOICE_ID', '21m00Tcm4TlvDq8ikWAM')  # Rachel
+        expert_voice_id = os.getenv('ELEVEN_EXPERT_VOICE_ID', 'pNInz6obpgDQGcFmaJgB')  # Adam
+        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        buf = io.BytesIO()
+        for ln in lines:
+            is_expert = ln.startswith('👨') or ln.lower().startswith('expert:')
+            voice_id = expert_voice_id if is_expert else host_voice_id
+            spoken = ln.split(':', 1)[1].strip() if ':' in ln else ln
+            url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream"
+            payload = {
+                "text": spoken,
+                "model_id": "eleven_monolingual_v1",
+                "voice_settings": {
+                    "stability": 0.4,
+                    "similarity_boost": 0.7,
+                    "style": 0.0,
+                    "use_speaker_boost": True
+                }
+            }
+            headers = {
+                "xi-api-key": api_key,
+                "accept": "audio/mpeg",
+                "Content-Type": "application/json"
+            }
+            try:
+                with requests.post(url, json=payload, headers=headers, stream=True) as r:
+                    if r.status_code != 200:
+                        return jsonify({'error': f'ElevenLabs HTTP {r.status_code}', 'detail': r.text[:500]}), r.status_code
+                    for chunk in r.iter_content(chunk_size=4096):
+                        if chunk:
+                            buf.write(chunk)
+            except Exception as e:
+                return jsonify({'error': f'ElevenLabs request failed: {e}'}), 500
+        buf.seek(0)
+        return send_file(buf, mimetype='audio/mpeg', as_attachment=False, download_name='dialogue_eleven.mp3')
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/tts_dual', methods=['POST'])
+def tts_dual():
+    """Generate audio from provided text with alternating voices (Edge TTS)."""
+    try:
+        text = request.form.get('text', '').strip()
+        if not text:
+            return ('Missing text', 400)
+        try:
+            import edge_tts
+            import asyncio, io
+        except Exception:
+            return jsonify({'error': 'edge-tts not installed. Run: pip install edge-tts'}), 500
+
+        async def synth_dual(input_text: str):
+            male_voice = 'en-US-GuyNeural'
+            female_voice = 'en-US-JennyNeural'
+            lines = [ln.strip() for ln in input_text.splitlines() if ln.strip()]
+            buf = io.BytesIO()
+            for ln in lines:
+                is_expert = ln.startswith('👨') or ln.lower().startswith('expert:')
+                voice = male_voice if is_expert else female_voice
+                spoken = ln.split(':', 1)[1].strip() if ':' in ln else ln
+                comm = edge_tts.Communicate(spoken, voice=voice)
+                async for chunk in comm.stream():
+                    if chunk["type"] == "audio":
+                        buf.write(chunk["data"])
+            buf.seek(0)
+            return buf
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        audio_buf = loop.run_until_complete(synth_dual(text))
+        loop.close()
+        return send_file(audio_buf, mimetype='audio/mpeg', as_attachment=False, download_name='dialogue_dual.mp3')
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
@@ -481,7 +586,13 @@ if __name__ == '__main__':
     print("="*60 + "\n")
     
     try:
-        app.run(debug=True, host='127.0.0.1', port=5001, threaded=True)
+        import asyncio
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    except Exception:
+        pass
+
+    try:
+        app.run(debug=True, host='127.0.0.1', port=5001, threaded=True, use_reloader=False)
     except KeyboardInterrupt:
         print("\n👋 Server stopped by user")
     except Exception as e:
