@@ -1,0 +1,4 @@
+{
+  "detail": "{\"detail\":{\"status\":\"quota_exceeded\",\"message\":\"This request exceeds your quota of 10000. You have 14 credits remaining, while 61 credits are required for this request.\"}}",
+  "error": "ElevenLabs HTTP 401"
+}

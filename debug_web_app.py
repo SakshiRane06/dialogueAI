@@ -493,7 +493,9 @@ def tts_audio():
 
 @app.route('/tts_eleven', methods=['POST'])
 def tts_eleven():
-    """Generate audio using ElevenLabs, alternating voices by speaker labels."""
+    """Generate audio using ElevenLabs, alternating voices by speaker labels.
+    Falls back to Edge TTS if ElevenLabs returns a non-200 status (e.g., 401).
+    """
     try:
         text = request.form.get('text', '').strip()
         if not text:
@@ -506,6 +508,9 @@ def tts_eleven():
         expert_voice_id = os.getenv('ELEVEN_EXPERT_VOICE_ID', 'pNInz6obpgDQGcFmaJgB')  # Adam
         lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
         buf = io.BytesIO()
+        use_edge_fallback = False
+        last_err_status = None
+        last_err_detail = None
         for ln in lines:
             is_expert = ln.startswith('👨') or ln.lower().startswith('expert:')
             voice_id = expert_voice_id if is_expert else host_voice_id
@@ -529,14 +534,56 @@ def tts_eleven():
             try:
                 with requests.post(url, json=payload, headers=headers, stream=True) as r:
                     if r.status_code != 200:
-                        return jsonify({'error': f'ElevenLabs HTTP {r.status_code}', 'detail': r.text[:500]}), r.status_code
+                        # Capture error and fall back to Edge TTS
+                        last_err_status = r.status_code
+                        last_err_detail = r.text[:500]
+                        use_edge_fallback = True
+                        break
                     for chunk in r.iter_content(chunk_size=4096):
                         if chunk:
                             buf.write(chunk)
             except Exception as e:
-                return jsonify({'error': f'ElevenLabs request failed: {e}'}), 500
-        buf.seek(0)
-        return send_file(buf, mimetype='audio/mpeg', as_attachment=False, download_name='dialogue_eleven.mp3')
+                # Network error; fall back
+                last_err_status = 500
+                last_err_detail = f"ElevenLabs request failed: {e}"
+                use_edge_fallback = True
+                break
+        if not use_edge_fallback:
+            buf.seek(0)
+            return send_file(buf, mimetype='audio/mpeg', as_attachment=False, download_name='dialogue_eleven.mp3')
+        # Fallback to Edge TTS
+        try:
+            import edge_tts
+            import asyncio
+            async def synth_dual(input_text: str):
+                male_voice = 'en-US-GuyNeural'
+                female_voice = 'en-US-JennyNeural'
+                lines2 = [ln.strip() for ln in input_text.splitlines() if ln.strip()]
+                buf2 = io.BytesIO()
+                for ln2 in lines2:
+                    is_expert2 = ln2.startswith('👨') or ln2.lower().startswith('expert:')
+                    voice2 = male_voice if is_expert2 else female_voice
+                    spoken2 = ln2.split(':', 1)[1].strip() if ':' in ln2 else ln2
+                    comm = edge_tts.Communicate(spoken2, voice=voice2)
+                    async for chunk in comm.stream():
+                        if chunk["type"] == "audio":
+                            buf2.write(chunk["data"])
+                buf2.seek(0)
+                return buf2
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            audio_buf = loop.run_until_complete(synth_dual(text))
+            loop.close()
+            resp = send_file(audio_buf, mimetype='audio/mpeg', as_attachment=False, download_name='dialogue_dual_fallback.mp3')
+            try:
+                resp.headers['X-TTS-Fallback'] = f"edge-tts; cause={last_err_status}"
+            except Exception:
+                pass
+            return resp
+        except Exception:
+            if last_err_status and last_err_detail:
+                return jsonify({'error': f'ElevenLabs HTTP {last_err_status}', 'detail': last_err_detail}), last_err_status
+            return jsonify({'error': 'TTS fallback failed and no audio generated'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
